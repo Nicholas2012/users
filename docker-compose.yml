@@ -1,0 +1,26 @@
+services:
+  postgres:
+    image: postgres:latest # image образа который будет взят из docker hub
+    ports:
+      - 5432:5432 # порты которые будут проброшены на хост (локальный порт - порт контейнера)
+    environment: # переменные окружения
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_USER=api
+      - POSTGRES_DB=api
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api-server:
+    build: ./
+    ports:
+      - 8080:8080
+    environment:
+      - DB=postgres://api:secret@postgres:5432/api?sslmode=disable
+      - LISTEN=:8080
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy

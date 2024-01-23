@@ -4,10 +4,8 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
-)
 
-const (
-	limit = 10 // limit users per page
+	"github.com/doug-martin/goqu/v9"
 )
 
 type Users struct {
@@ -28,6 +26,13 @@ type User struct {
 	Age         *int
 	Gender      *string
 	Nationality *string
+}
+
+type ListOpts struct {
+	Page  int
+	Limit int
+	Age   int    // поиск по возрасту
+	Name  string // поиск по имени
 }
 
 func (s *Users) Delete(id int) error {
@@ -107,42 +112,67 @@ type UserList struct {
 	Page  int
 }
 
-func (s *Users) List(page int) (*UserList, error) {
+func (s *Users) List(opts ListOpts) (*UserList, error) {
+	qb := goqu.From("users")
+
+	if opts.Age > 0 {
+		qb = qb.Where(goqu.Ex{"age": opts.Age})
+	}
+	if opts.Name != "" {
+		qb = qb.Where(goqu.L("name || ' ' || surname || ' ' || patronymic ILIKE ?", fmt.Sprint("%", opts.Name, "%")))
+	}
+
+	// get total count
+	countQuery, countArgs, err := qb.Select(goqu.L("COUNT(*)")).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build count query: %w", err)
+	}
+	slog.Debug("list count query", "query", countQuery, "repository", "users")
 	var count int
-	if err := s.db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&count); err != nil {
+	if err := s.db.QueryRow(countQuery, countArgs...).Scan(&count); err != nil {
 		return nil, fmt.Errorf("count: %w", err)
 	}
 
-	offset := (page - 1) * limit
-	if offset < 0 {
-		offset = 0
-		page = 1
-	}
-	if page > count/limit {
-		page = count/limit + 1
-		offset = (page - 1) * limit
+	userList := UserList{
+		Users: make([]User, 0, opts.Limit),
+		Count: count,
+		Pages: count / opts.Limit,
+		Page:  opts.Page,
 	}
 
-	rows, err := s.db.Query(`
-		SELECT id, name, surname, patronymic, age, gender, nationality 
-		FROM users 
-		OFFSET $1 
-		LIMIT $2`, offset, limit)
+	// calculate offset and fix pages if needed
+	offset := (opts.Page - 1) * opts.Limit
+	if offset < 0 {
+		offset = 0
+		opts.Page = 1
+	}
+	if count%opts.Limit > 0 {
+		userList.Pages++
+	}
+	if userList.Pages == 0 {
+		userList.Page = 0
+		return &userList, nil
+	}
+
+	// get data
+	selectQuery, selectArgs, err := qb.
+		Select("id", "name", "surname", "patronymic", "age", "gender", "nationality").
+		Offset(uint(offset)).
+		Limit(uint(opts.Limit)).ToSQL()
+	if err != nil {
+		return nil, fmt.Errorf("build select query: %w", err)
+	}
+	slog.Debug("list query", "query", countQuery, "args", countArgs, "repository", "users")
+
+	rows, err := s.db.Query(selectQuery, selectArgs...)
 	if err != nil {
 		return nil, err
 	}
 	defer func() {
 		if err := rows.Close(); err != nil {
-			slog.Debug("db rows close", "err", err)
+			slog.Debug("db rows close", "err", err, "repository", "users")
 		}
 	}()
-
-	userList := UserList{
-		Users: make([]User, 0, limit),
-		Count: count,
-		Pages: count/limit + 1,
-		Page:  page,
-	}
 
 	for rows.Next() {
 		var user User

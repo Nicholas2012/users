@@ -24,7 +24,7 @@ type Nationalities interface {
 
 type UsersRepository interface {
 	Get(id int) (*repository.User, error)
-	List(page int) (*repository.UserList, error)
+	List(opts repository.ListOpts) (*repository.UserList, error)
 	Insert(name string, surname string, patronymic string, age int, gender string, nationality string) (int, error)
 	Update(id int, name string, surname string, patronymic string, age int, gender string, nationality string) (int, error)
 	Delete(id int) error

@@ -38,9 +38,9 @@ func main() {
 
 	storage := repository.New(db) // создали клиента к базе данных
 
-	ageClient := agify.New()
-	genderClient := genderize.New()
-	nationalityClient := nationalize.New()
+	ageClient := agify.New(cfg.AgeAPI)
+	genderClient := genderize.New(cfg.GenderAPI)
+	nationalityClient := nationalize.New(cfg.NationalityAPI)
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)

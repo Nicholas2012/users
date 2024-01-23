@@ -11,7 +11,7 @@ func Logger(next http.Handler) http.Handler {
 		now := time.Now()
 		next.ServeHTTP(w, r)
 
-		slog.Debug("request",
+		slog.Info("request",
 			slog.String("method", r.Method),
 			slog.String("url", r.URL.String()),
 			slog.String("remote_addr", r.RemoteAddr),

@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	BaseURL = "https://api.genderize.io/"
 	Timeout = 5 * time.Second
 )
 
@@ -17,12 +16,12 @@ type Client struct {
 	baseURL string
 }
 
-func New() *Client {
+func New(apiURL string) *Client {
 	return &Client{
 		cli: &http.Client{
 			Timeout: Timeout,
 		},
-		baseURL: BaseURL,
+		baseURL: apiURL,
 	}
 }
 
@@ -33,7 +32,6 @@ type GenderResponse struct {
 }
 
 func (c *Client) Gender(name string) (string, error) {
-	// https://api.genderize.io/?name=Dmitriy
 
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/?name=%s", c.baseURL, name), nil)
 	if err != nil {

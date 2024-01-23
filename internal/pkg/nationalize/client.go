@@ -9,7 +9,6 @@ import (
 )
 
 const (
-	BaseURL = "https://api.nationalize.io/"
 	Timeout = 5 * time.Second
 )
 
@@ -29,12 +28,12 @@ type NationalityResponse struct {
 	Country []CountryStruct `json:"country"`
 }
 
-func New() *Client {
+func New(apiURL string) *Client {
 	return &Client{
 		cli: &http.Client{
 			Timeout: Timeout,
 		},
-		baseURL: BaseURL,
+		baseURL: apiURL,
 	}
 }
 

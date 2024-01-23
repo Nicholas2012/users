@@ -1,5 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
+CREATE EXTENSION pg_trgm;
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,
@@ -9,6 +10,8 @@ CREATE TABLE users (
     gender CHAR(1),
     nationality VARCHAR
 );
+CREATE INDEX users_names ON users USING gin ((name || ' ' || surname || ' ' || patronymic) gin_trgm_ops);
+CREATE INDEX users_age ON users (age);
 -- +goose StatementEnd
 
 -- +goose Down
